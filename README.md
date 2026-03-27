@@ -75,7 +75,7 @@ Next, inspect the step-by-step evolution of a small 2-d 4x4 lattice by way of th
 
     %run ./BHPropagation.py --dim 2 --length 4 --steps 1000 --dynamics bounded  --seed 579289 --runs 1 --limit 1 --print
 
-As can be seen, the output shows the evolution of the regular particles, the Z-tokens, and also the ModPool "control" matrix.
+As can be seen, the output shows the evolution of the regular particles, the Z-tokens, and also the ModPool "control" matrix. (If you are unfamiliar with python debuggers, keep pressing 'c' to continue the code for another step.
 
 All this can be easily modified.
 
