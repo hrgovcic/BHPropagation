@@ -4030,7 +4030,7 @@ def Iterate(ggrah, opts, bContinuous=False):
     elif opts.dynamics in ('bounded', 'bound'):
        InOutFunction = PedanticKeepGoing 
        CoreFn = BoseOutM
-    elif opts.dynamics in ('bose', 'bose-einstein', 'boson', 'varym', 'boundvarym', 'boundvary', 'boundvarym', 'boundvary', 'boundedvarym', 'boundedvary', 'boundedvarym', 'boundedvary', 'vary'):
+    elif opts.dynamics in ('bose', 'bose-einstein', 'boson', 'bosevary', 'varym', 'boundvarym', 'boundvary', 'boundvarym', 'boundvary', 'boundedvarym', 'boundedvary', 'boundedvarym', 'boundedvary', 'vary'):
        InOutFunction = PedanticKeepGoing 
        CoreFn = BoseOutM
     elif opts.dynamics in ('fermion', 'fermi', 'fermi-dirac', 'fermidirac'):
@@ -4810,7 +4810,7 @@ if __name__ == '__main__':
 
     ggraph = CreateGraph(opts)
 
-    if opts.dynamics in ('bound', 'bounded', 'boson', 'bose', 'bose-einstein', 'boseeinstein', 
+    if opts.dynamics in ('bound', 'bounded', 'boson', 'bose', 'bosevary', 'bose-einstein', 'boseeinstein', 
         'fermion', 'fermi', 'fermi-dirac', 'fermidirac', 'infinitecutoffmodpool', 'ztoken', 'bosemax', 'oldbose', 'boseold', 'varym', 'bosevarym', 'bosevary', 'vary'):
         ggraph.bNeedZTokens = True
     
