@@ -56,7 +56,7 @@ The continuous case is also computed, as is the modpool, so that after the requi
 A second mode of usage is to set the number of MonteCarlo runs to 1, and iterate the graph over many time steps and
 observe the growth in the absolute number of particles, which is linear with time in the case of pure Brownian-Huygens Propagation, proportional to the square root of time in the case of ModPool (or its variations, as discussed in the paper), or else, bounded (barring the usual momentary spikes that can be brushed off as another quantum fluctuation). Search on linregress(tarr, absarr) to see how this was done.
 
-    %run ./BHPropagation.py --dim 2 --length 8 --steps 1000 --dynamics modpool  --seed 579289 --runs 1 --limit 1
+    %run ./BHPropagation.py --dim 2 --length 8 --steps 1000 --dynamics modpool  --seed 579289 --runs 1 
 
 Then, execute the following commands to plot N_abs with time:
 
