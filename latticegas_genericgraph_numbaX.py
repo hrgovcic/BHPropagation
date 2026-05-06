@@ -209,6 +209,8 @@ def MonteCarlo(D, R, nruns=15, nstep=5):
 from mpl_toolkits import mplot3d
 import numpy as np
 import matplotlib.pyplot as plt
+import date 
+
 
 
 
@@ -6481,8 +6483,10 @@ if __name__ == '__main__':
 
 
             if (t % 10_000_000 == 0) and t > 0:
+                today = date.today()
+                yyyymmdd = '%4d%02d%02d' % (today.year, today.month, today.day)
                 #import pdb; pdb.set_trace()
-                f = open("blah.pkl", "wb")
+                f = open("blah" + yyyymmdd + ".pkl", "wb")
                 pickle.dump([tarr, absarr, absarrz, ggraph, sys.argv], f)
                 f.close()
                 
