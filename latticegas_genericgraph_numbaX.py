@@ -6387,7 +6387,11 @@ if __name__ == '__main__':
 
 
                     if t >= TMAX - timechunk:
-                        print("Run,Time", irun, t, linregress(np.log(np.array(tarr)), np.log(absarrz)), len(tarr))
+                        if len(tarr) > 10:
+                            lastabsarz = np.mean(absarrz[-5:])
+                        else:
+                            lastabsarz = absarrz[-1]
+                        print("Run,Time", irun, t, linregress(np.log(np.array(tarr)), np.log(absarrz)), len(tarr), lastabsarz)
                         plt.plot(np.log(tarr), np.log(absarrz))
                         import pdb; pdb.set_trace()
 
