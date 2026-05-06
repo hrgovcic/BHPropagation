@@ -6339,7 +6339,11 @@ if __name__ == '__main__':
             bFullPrint = opts.print
 
             if (t % 1000 == 0) and len(tarr) > 2:
-                print("Run,Time", irun, t, linregress(np.log(np.array(tarr)), np.log(absarrz)), len(tarr))
+                if len(tarr) > 10:
+                    lastabsarz = np.mean(absarrz[-5:])
+                else:
+                    lastabsarz = absarrz[-1]
+                print("Run,Time", irun, t, linregress(np.log(np.array(tarr)), np.log(absarrz)), len(tarr), np.round(lastabsarz))
             ggraph.t = t
             ggraph.irun = irun
 
@@ -6359,7 +6363,7 @@ if __name__ == '__main__':
 
 
 
-            tarr_print_increment = 100_000 # 5000# 10
+            tarr_print_increment = timechunk # 5000# 10
             tarr_pause_increment = 10_000_000_000_000_000 # never
             if not(bFullPrint):
                 if True: #t % tarr_print_increment == 0: # and NRuns == 1:
@@ -6370,9 +6374,6 @@ if __name__ == '__main__':
                         thisl2 += np.sum([x * x for x in ggraph.NodeVec[i].Amplitude])
 
                         thissuml2 = np.sum(thisl2)
-                        #if thissuml2 > 10000000:
-                        #    print("YAY", np.sum(thisl2))
-
 
                     thissumx, thissumx2 = ggraph.Sumx(False)
                     sumx.append(thissumx)
@@ -6465,8 +6466,8 @@ if __name__ == '__main__':
             go through one scnario with large ampE
             """
 
-            if (t != 0) and (t % 250000 == 0):
-                print("Run,Time", irun, t)
+            #if (t != 0) and (t % 250000 == 0):
+            #    print("Run,Time", irun, t)
             
 
             if bFullPrint and t > 1000:
