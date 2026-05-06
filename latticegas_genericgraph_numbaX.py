@@ -209,7 +209,7 @@ def MonteCarlo(D, R, nruns=15, nstep=5):
 from mpl_toolkits import mplot3d
 import numpy as np
 import matplotlib.pyplot as plt
-import date 
+from datetime import date 
 
 
 
@@ -7051,5 +7051,5 @@ or in general
 
 python  ./latticegas_genericgraph_numba.py  --dim 2 --length 4  --steps 10_000  --dynamics bose --limit 1  --zdynamics pedantic --seed 57920 --runs 1  --boundaryconditions Initialize4off --managez
 
-python  ./latticegas_genericgraph_numba.py  --dim 2 --length 4  --steps 1_000_000_000_000_000  --dynamics bose --limit 1  --zdynamics pedantic --seed 579204 --runs 1  --boundaryconditions Initialize4off 
+python3  ./latticegas_genericgraph_numbaX.py  --dim 2 --length 4  --steps 1_000_000_000_000_000  --dynamics bose --limit 1  --zdynamics pedantic --seed 579204 --runs 1  --boundaryconditions Initialize4off 
 """
