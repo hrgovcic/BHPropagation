@@ -861,7 +861,13 @@ class graph_t():
     def SumAbsCtl(self,bPrint=True):
         myret = np.sum([np.abs(inode.AmplitudeCtl) for inode in self.NodeVec])
         if bPrint:
-            print("Sumampctl ", myret)
+            print("Sumabsctl ", myret)
+        return myret
+
+    def SumAbsZ(self,bPrint=True):
+        myret = np.sum([np.abs(inode.ZAmplitude) for inode in self.NodeVec])
+        if bPrint:
+            print("SumabsZ ", myret)
         return myret
 
 
@@ -2706,13 +2712,23 @@ def CreateGraph(opts):
         print("ERROR: --loadfrompkl and --loadfromadjacencyfile cannot be invoked simultaneously; pick the correct one and rerun")
         sys.exit()
     if loadpklfilename != "":
-        
+
+        if opts.runs > 1:
+            print("ERROR: cannot use --loadfrompkl for convergence studies. You can save a particular configuration as an adjacency file and run that, but if Z-token values are not zero everywhere the MonteCarlo runs will not necessarily converge to the continuous case.")
+            sys.exit()
         with open(loadpklfilename, 'rb') as file:
+
+
             contents = pickle.load(file)
             graphobj = contents[0]
             graphobj.GetFromNodeNbr()
             return graphobj
     if adjacencyfilename != "":
+        if opts.runs > 1:
+            if ggraph.SumAbsZ(False) != 0 or ggraph.SumAbsCtl(False) != 0:
+            print("WARNING: since there are non-zero token or control/ModPool fields, the MonteCarlo simulation will not converge to the continous case.")
+            sys.exit()
+
         graphobj = CreateGraphFromAdjacencyList(adjacencyfilename)
         graphobj.GetFromNodeNbr()
         return graphobj
