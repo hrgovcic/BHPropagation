@@ -48,8 +48,8 @@ These programs construct a generic graph with continuous, integer (and also Z-to
 
 We will then proceed to define heat-propagation (i.e. random walk), modpool heat-prop, B-H propagation, modpool B-H prop
 (and eventually, boson and fermion versions, with the former employing a bath of Z-tokens, which ensure that no
-outgoing edge has a value other than -1, 0, or 1 -- i.e. it satisfies a Pauli Exclusion principle). We can also (in the
-case of bosons) set the maximum particle absolute amplitude to some number > 1.
+outgoing edge has a value other than -1, 0, or 1 -- i.e. it satisfies a Pauli Exclusion principle). We can also 
+set the maximum particle absolute amplitude to some number > 1 (as studied by Gentile).
 
 To avoid clutter, we have omitted the implementation of "naive regularization" which consists merely of spewing 
 particle-antiparticle pairs whenever doing so at a given node would reduce the overall outgoing particle number. 
@@ -2706,6 +2706,7 @@ def CreateGraph(opts):
         print("ERROR: --loadfrompkl and --loadfromadjacencyfile cannot be invoked simultaneously; pick the correct one and rerun")
         sys.exit()
     if loadpklfilename != "":
+        
         with open(loadpklfilename, 'rb') as file:
             contents = pickle.load(file)
             graphobj = contents[0]
@@ -2713,7 +2714,6 @@ def CreateGraph(opts):
             return graphobj
     if adjacencyfilename != "":
         graphobj = CreateGraphFromAdjacencyList(adjacencyfilename)
-        #import pdb; pdb.set_trace()
         graphobj.GetFromNodeNbr()
         return graphobj
 
@@ -5615,8 +5615,6 @@ def dosomegraphsatcenter(ggraph,ngraph,bXdir=True):
 
 def Main():
 
-
-
     opts, args = ReadParams()
 
     bListInitializerFunctions = False
@@ -5694,8 +5692,9 @@ may be observed for many of these routines with the assistance of the --print op
 
 
     if not(bFoundAmongMiscInitRoutines) and opts.dimension > 0:
-        print("Unrecognized boundary condition -- check the available ones and find the correct name, or add your own routine.")
-        sys.exit()
+        if opts.loadpicklefile == '' and opts.loadadjacencyfile == '':
+            print("Unrecognized boundary condition -- check the available ones and find the correct name, or add your own routine.")
+            sys.exit()
 
 
     print("\n" + desctxt + "\n")
@@ -5901,7 +5900,7 @@ dimension, subject to the restriction that D**length < maxnodes; maxnodes is cur
             print(" ")
 
 
-
+        """
 
         longtxt = "Assuming a D-dimensional lattice of length L in each dimension, as specified by the --dimension and --length switches \
 (so that the number of nodes is D**L), there are several initializations available. Here are a few (see the code for some more)."
@@ -5996,6 +5995,8 @@ This demonstrates how naive regularization may be effected through Z-token/antit
         print(textwrap.fill(longtxt, width=maxtxtlen))
         print(" ")
 
+        """
+
         longtxt = "In the special case of two-dimensional rectangular lattices, the --print option provides a 3-fold printout \
 of amplitudes on the graph edges for particles, z-tokens, and also the  ModPool (i.e. the  \"control\") cases. (The incoming/outgoing sums of these edge flows at any node are also printed.) \
 The feature was particularly useful in debugging and modifying the dynamics. \
@@ -6028,10 +6029,25 @@ a corruption of the wave equation, though one that can be made arbitrarily minim
         print(" ")
 
         longtxt = "You can save (as a pickle file) any graph G at any time using the SaveGraph(G, dumppklname) or SaveGraphWOpt(ggraph, dumppklname) \
-routines, and then if you run a script with dumppklname as the --loadfrompkl parameter, the initial conditions will be the graph that was saved."
+routines, and then if you run a script with dumppklname as the --loadfrompkl parameter, the initial conditions will be the graph that was saved. \
+If the graph is a D-dimensional lattice, it is preferable to save it as a pickle file rather than with an adjacency list."
 
         print(textwrap.fill(longtxt, width=maxtxtlen))
         print(" ")
+
+
+
+        longtxt = "Allowable values for the --dynamics parameter are 'heat', 'fermi', 'pauli' (and 'modpool' or 'bose', which \
+is also calculated automatically as the \"control\" case for any dynamics except 'heat'). \
+In the case of 'pauli', the --limit option specifies the maximum number of particles per edge (default value is 1, and \
+if it is larger, then the result will obey Gentile's generalized exclusion principle); if 'fermi' is chosen, then the \
+usual form of the Pauli exclusion principle is assumed. Note there is a spreading algorithm that slightly differes between \
+the case where 'fermi' is chosen and the one where 'pauli' is chosen with a --limit of 1, but the results have the same \
+expected value."
+
+        print(textwrap.fill(longtxt, width=maxtxtlen))
+        print(" ")
+
 
         longtxt = "Here are a few other scripts that may be of particular interest in that they demonstrate the difference (in terms of rates of convergence) between whorl-regularized systems and plain ModPool (especially for longer and longer values of the --steps parameter):"
 
@@ -6046,7 +6062,7 @@ routines, and then if you run a script with dumppklname as the --loadfrompkl par
         print(" ")
 
 
-        print("    python " + __file__ + " --dim 2 --length 4 --steps 3 --dynamics bosevary --seed 579202 --runs 1_000 --boundaryconditions InitializeNaiveRegEmission")
+        print("    python " + __file__ + " --dim 2 --length 4 --steps 3 --dynamics bose --seed 579202 --runs 1_000 --boundaryconditions InitializeNaiveRegEmission")
 
         longtxt = "Please report any bugs or other suggestions to the author at the email address given in the paper."
 
@@ -6113,7 +6129,7 @@ routines, and then if you run a script with dumppklname as the --loadfrompkl par
 
 
 
-    elif opts.dynamics in ('fermion', 'fermi', 'fermi-dirac', 'fermidirac','pauli'):
+    elif opts.dynamics in ('fermion', 'fermi', 'fermi-dirac', 'fermidirac','pauli', 'gentile'):
         argdict['InOutFunction'] = PedanticKeepGoing # Pedantic if bPedantic else AlternateToPedantic   
         if opts.limit > 1:
             if not(opts.dynamics != 'gentile'):
@@ -6214,14 +6230,16 @@ routines, and then if you run a script with dumppklname as the --loadfrompkl par
     bDoContinuous = True
     bGenericInitializationRoutine = False # use this for random graphs which are to be initialized elsewhere
     if opts.loadpicklefile != '':
-        bDoContinuous = False
-        bGenericInitializationRoutine = True # use this for random graphs which are to be initialized elsewhere
+        if ggraph.NDim == 0:
+            bDoContinuous = False
+            bGenericInitializationRoutine = True # use this for random graphs which are to be initialized elsewhere
 
 
 
     NRuns_needed_to_fit_control = 0
     NRuns_needed_to_fit_test = 0
     
+
     if bDoContinuous:
         if not(bGenericInitializationRoutine):
             
@@ -6603,8 +6621,6 @@ routines, and then if you run a script with dumppklname as the --loadfrompkl par
                 print("Run", irun, ' '.join(sys.argv), " :: MonteCarlo_sumsqerr", chisq)
             else:
                 print("Run", irun, ' '.join(sys.argv), " :: BHP_err", chisq, " MP_err", chisqctl )
-
-            import pdb; pdb.set_trace()
 
             """
             bStopWhenChiSqIsSmall = False
