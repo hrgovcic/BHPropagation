@@ -96,7 +96,7 @@ Propagation, proportional to the square root of time in the case of ModPool (or 
 or else, bounded (barring the usual momentary spikes that can be brushed off as another quantum fluctuation). Search
 on linregress(tarr, absarr) to see how this was done.
 
- %run  thisfile.py --dim 2 --length 8 --steps 1000 --dynamics bose  --seed 579289 --runs 1
+ %run  thisfile.py --dim 2 --length 8 --steps 1000 --dynamics bose  --seed 579289 --runs 1  --boundaryconditions InitializeDiracDelta
 
 Note that 'bose' dynamics simply means a dynamics for which there is a generalized Pauli Exclusion Principle
 that mandates that the particle count never exceeds M (where M is given by --limit, or if that is absent, is 1).
@@ -583,7 +583,7 @@ def ReadParams():
                     action="store", dest='regprob', type='float',
                     help="regularization probability -- used only with ModPool or PureBHP; the smaller it is the less likely that naive regularization will be performed at a node")
 
-    p.add_option("--initlist", default=False,
+    p.add_option("--initlist", "--initializelist",  "--listinitialize", default=False,
                     action="store_true", dest='initlist', 
                     help="list the available arguments for --boundaryconditions")
 
@@ -2726,8 +2726,8 @@ def CreateGraph(opts):
     if adjacencyfilename != "":
         if opts.runs > 1:
             if ggraph.SumAbsZ(False) != 0 or ggraph.SumAbsCtl(False) != 0:
-            print("WARNING: since there are non-zero token or control/ModPool fields, the MonteCarlo simulation will not converge to the continous case.")
-            sys.exit()
+                print("WARNING: since there are non-zero token or control/ModPool fields, the MonteCarlo simulation will not converge to the continous case.")
+                sys.exit()
 
         graphobj = CreateGraphFromAdjacencyList(adjacencyfilename)
         graphobj.GetFromNodeNbr()
@@ -4159,7 +4159,7 @@ def PedanticKeepGoing(incarr, incarr_br, argdict): # PairTokenThenSubtract(incar
     brownhuygout, displaced = CoreFunction(mp, argdict)
 
 
-    if CoreFunction == FermiOut6 and np.max(np.abs(brownhuygout)) > 1:
+    if CoreFunction == FermiOut6Orig and np.max(np.abs(brownhuygout)) > 1:
         print("violated PEP")
         import pdb; pdb.set_trace()
 
@@ -4199,7 +4199,7 @@ def PedanticKeepGoing(incarr, incarr_br, argdict): # PairTokenThenSubtract(incar
     
 
 
-def FermiOut6(inputarcarr, argdict):
+def FermiOut6Orig(inputarcarr, argdict):
     """
     In this version we will calculate the modpool output and then calc a deviation-from-PEP vector, and then
     a displacement vector (whose sum is zero) to make the deviation-from-PEP zero.
@@ -4254,7 +4254,7 @@ def FermiOut6(inputarcarr, argdict):
     # first, take care of the Ztokens (which used to be referred to as just a "heat bath")
 
     if np.abs(np.sum(inputarcarr)) > len(inputarcarr):
-        print("Error in FermiOut6() -- inputs violate PEP so that PEP cannot be satisfied.")
+        print("Error in FermiOut6Orig() -- inputs violate PEP so that PEP cannot be satisfied.")
         import pdb; pdb.set_trace()
 
 
@@ -4305,14 +4305,14 @@ def FermiOut6(inputarcarr, argdict):
         #whichind = WhicheverWorks(err, modpoolout, signsumerr)
         
         if whichind is None:
-            print("ERROR in FermiOut6: cannot lay off all the excess; consider changing whichind assignment")
+            print("ERROR in FermiOut6Orig: cannot lay off all the excess; consider changing whichind assignment")
             import pdb; pdb.set_trace()
         err[whichind] -= signsumerr
         modpoolout[whichind] += signsumerr
 
 
     if np.max(np.abs(modpoolout)) > 1:
-        print("ERROR in FermiOut6: could not lay off excess; PEP violation")
+        print("ERROR in FermiOut6Orig: could not lay off excess; PEP violation")
         import pdb; pdb.set_trace()
 
     return modpoolout, err
@@ -4932,11 +4932,8 @@ def Iterate(ggraph, opts, argdict, bContinuous=False):
                 ggraph.NodeVec[i].ZScratchIn = inlist_ztoken               
                 outamp, outampz = InOutFunction(inlist, inlist_ztoken, argdict)    
 
-
-              
-            
             else:
-                outamp = InOutFunction(inlist)       
+                outamp = InOutFunction(inlist, argdict)       
                 outamp_ctl = outamp
 
 
@@ -5630,7 +5627,6 @@ def dosomegraphsatcenter(ggraph,ngraph,bXdir=True):
 
 
 def Main():
-
     opts, args = ReadParams()
 
     bListInitializerFunctions = False
@@ -5638,12 +5634,10 @@ def Main():
     BoundaryConditions = opts.initialconditions
 
 
-
+    
     if len(sys.argv) > 1:
-        if sys.argv[1] == '--initlist' and len(sys.argv) == 2:
+        if sys.argv[1] in ("--initlist", "--initializelist",  "--listinitialize") and len(sys.argv) == 2:
             bListInitializerFunctions = True
-
-
 
     fnlist = []
 
@@ -5665,11 +5659,11 @@ def Main():
         (InitializeNaiveRegEmission, 'InitializeNaiveRegEmission', "BoundaryConditions: a particle/antiparticle pair." ),
         (InitializeNaiveRegEmissionWWhorl, 'InitializeNaiveRegEmissionWWhorl', "BoundaryConditions: particle/antiparticle, along with an offsetting whorl (see code for details)." ),
         (Initialize1Zwhorl, 'Initialize1Zwhorl', "BoundaryConditions: a whorl-like arrangement of tokens (with no corresponding regular particles) that will vanish after one step." ),
-        (Initialize2CollideAngle, 'Initialize2CollideAngle', "BoundaryConditions: visually, a kind of scattering situation with two hodotic solutions colliding, so to speak, at an an angle (opposite sign)." ),
-        (Initialize2CollideAngleSameSign, 'Initialize2CollideAngleSameSign', "BoundaryConditions: visually, a kind of scattering situation with two hodotic solutions colliding, so to speak, at an an angle (same sign)." ),
-        (Initialize2CollideHeadOn, 'Initialize2CollideHeadOn', "BoundaryConditions: visually, a kind of scattering situation with two hodotic solutions colliding, so to speak, from opposite directions (opposite sign)." ),
-        (Initialize2CollideHeadOnSameSign, 'Initialize2CollideHeadOnSameSign', "BoundaryConditions: visually, a kind of scattering situation with two hodotic solutions colliding, so to speak, from opposite directions (same sign)." ),
-        (Initialize1whorlA, 'Initialize1whorlA', "BoundaryConditions: simple whorl emission. Statistically identical to emitting no particles at all (but requiring many more steps to converge for higher number of steps, than with ModPool dynamics)." ),
+        (Initialize2CollideAngle, 'Initialize2CollideAngle', "BoundaryConditions: visually, suggestive of a scattering situation with two hodotic solutions colliding, so to speak, at a rght angle (opposite sign)." ),
+        (Initialize2CollideAngleSameSign, 'Initialize2CollideAngleSameSign', "BoundaryConditions: visually, suggestive of a scattering situation with two hodotic solutions colliding, so to speak, at a right angle (same sign)." ),
+        (Initialize2CollideHeadOn, 'Initialize2CollideHeadOn', "BoundaryConditions: visually, suggestive of a scattering situation with two hodotic solutions colliding, so to speak, from opposite directions (opposite sign)." ),
+        (Initialize2CollideHeadOnSameSign, 'Initialize2CollideHeadOnSameSign', "BoundaryConditions: visually, suggestive of a scattering situation with two hodotic solutions colliding, so to speak, from opposite directions (same sign)." ),
+        (Initialize1whorlA, 'Initialize1whorlA', "BoundaryConditions: simple whorl emission. Statistically identical to emitting no particles at all (but for higher number of steps, requiring many more steps to converge tp that expected value, than with ModPool dynamics)." ),
         (Initialize1shift, 'Initialize1shift', "BoundaryConditions: displacing a particle by way of single-shifting." ),
         (Initialize2offC, 'Initialize2offC', "BoundaryConditions: simple whorl emission." ),
         (Initialize2offD, 'Initialize2offD', "BoundaryConditions: another simple whorl emission." ),
@@ -5687,8 +5681,8 @@ def Main():
         longtxt = "The following is a list of numerous simple boundary conditions \
 (the first word of any paragraph is to be used with the --boundaryconditions parameter in any command line. \
 (Run the full tutorial to see working examples of command lines and, if desired, swap out the listed initializer \
-functions with one of the ones here). Note that the routines here are for  \
-D-dimensional rectangular graphs (with the two dimensional case being the most practical one; detailed evolution \
+functions with one of the ones here.) Note that the routines here are for  \
+D-dimensional rectangular graphs (with the two-dimensional case being the most practical one; detailed evolution \
 may be observed for many of these routines with the assistance of the --print option, as noted in the full tutorial):"
         print(" ")
         print(textwrap.fill(longtxt, width=maxtxtlen))
@@ -5774,7 +5768,7 @@ may be observed for many of these routines with the assistance of the --print op
                 bDeepDive = True
         
         if bDeepDive:
-            longtxt = "In that case, copy and paste either of the following python commands into the terminal (requires basic familiarity with running Python scripts on your computer). The first one constructs a graph \
+            longtxt = "In that case, copy and paste either of the following python commands into the terminal (this requires basic familiarity with running Python scripts on your computer). The first one constructs a graph \
 consisting of a 2-dimensional 8x8 lattice (as dictacted by the --dim and --length parameters) and performs \
 a MonteCarlo computation of 1000 runs (as indicated by the --runs parameter), with each run consisting of 3 steps (as dictated by the --steps parameter) \
 of BHP propagation that satisfiesa Pauli Exclusion Principle (as dictated by the \"--dynamics fermi\" selection), always starting each run with a Dirac delta function (as indicated by the \"--boundaryconditions InitializeDiracDelta\" selection). \
@@ -6053,8 +6047,10 @@ If the graph is a D-dimensional lattice, it is preferable to save it as a pickle
 
 
 
-        longtxt = "Allowable values for the --dynamics parameter are 'heat', 'fermi', 'pauli' (and 'modpool' or 'bose', which \
-is also calculated automatically as the \"control\" case for any dynamics except 'heat'). \
+        longtxt = "Allowable values for the --dynamics parameter are 'heat', 'pure', 'fermi', 'pauli' (and 'modpool' or 'bose', which \
+is also calculated automatically as the \"control\" case for any dynamics except 'heat'). The 'pure' dynamics generates \
+pure Brownian-Huygens propagation, so that the overall total particle count grows linearly with time, instead of (as with ModPool) the \
+square root of time. \
 In the case of 'pauli', the --limit option specifies the maximum number of particles per edge (default value is 1, and \
 if it is larger, then the result will obey Gentile's generalized exclusion principle); if 'fermi' is chosen, then the \
 usual form of the Pauli exclusion principle is assumed. Note there is a spreading algorithm that slightly differes between \
@@ -6089,8 +6085,8 @@ expected value."
        
 
     argdict = {}
-
     argdict["Reduction"] = 0
+
 
     if opts.steps == 0:
         print("ERROR: --steps parameter must be > 0 (or else just modify the code a little.)")
@@ -6130,14 +6126,16 @@ expected value."
     #can be purebrownian or modpool brownian(in that case particle number will be constant, but we'll add these in anyway), or pure (stands for pure two-sided multinomial Brownian-Huygens, modpool; boson or fermi)")
     elif opts.dynamics == 'pure' or opts.dynamics == 'purebrownianhuygens':
         argdict['InOutFunction'] = PureBHP
+        argdict['CoreFn'] = PureBHP
     elif opts.dynamics == 'modpool':
         argdict['InOutFunction'] = PureModPool
+        argdict['CoreFn'] = PureBHP
     
 
     # the rest of the che choices for dynamics necessitate Z-tokens
     elif opts.dynamics in ('boson', 'bose', 'bose-einstein', 'boseeinstein'):
-        argdict['InOutFunction'] = PedanticKeepGoing # PedanticKeepGoing #KeepGoing # PedanticPedantic if bPedantic else AlternateToPedantic # AlternateToPedantic
-        CoreFn = ModPool
+        argdict['InOutFunction'] = PureModPool # PedanticKeepGoing #KeepGoing # PedanticPedantic if bPedantic else AlternateToPedantic # AlternateToPedantic
+        CoreFn = PureModPool
         argdict['CoreFn'] = PureModPool
         if opts.limit != 0:
             print("Cannot specify bose dynamics with the --limit switch.")
@@ -6162,15 +6160,15 @@ expected value."
                 print(textwrap.fill(longtxt, width=maxtxtlen))
                 print(" ")
                 opts.limit = 1
-                CoreFn = FermiOut6
-                argdict['CoreFn'] = FermiOut6
+                CoreFn = FermiOut6Orig
+                argdict['CoreFn'] = FermiOut6Orig
             else:
                 CoreFn = FermiOutM
                 argdict['CoreFn'] = FermiOutM
     
-            argdict['CoreFn'] = FermiOut6
+            argdict['CoreFn'] = FermiOut6Orig
         else:
-            argdict['CoreFn'] = BoseOutM
+            argdict['CoreFn'] = FermiOutM
     else:
         print("WRONG DYNAMICS -- try again...see Iterate() for a list of all acceptable choices.")
         import pdb; pdb.set_trace()
@@ -6178,11 +6176,9 @@ expected value."
 
 
 
-    #correlwatch = correlwatch_t()
-    #comparison = None
     myseed = abs( opts.seed )
     
-    # for reasons beyond me, both these seeds have to be set or results will not replicate:
+    # for reasons internal to python, both these seeds have to be set or results will not replicate:
     # see https://stackoverflow.com/questions/46661426/why-random-seed-does-not-make-results-constant-in-python
     # and also https://stackoverflow.com/questns/31057g/should-i-use-random-seed-or-numpy-random-seed-to-control-random-number-gener
     # also, try using
@@ -6193,7 +6189,7 @@ expected value."
 
     #ggraph.Create2StepPaths()
 
-    if opts.dynamics in ('pauli', 'fermion', 'fermi', 'fermi-dirac', 'fermidirac','whorl'):
+    if opts.dynamics in ('pauli', 'fermion', 'fermi', 'fermi-dirac', 'fermidirac', 'whorl'):
         ggraph.bNeedZTokens = True    
 
 
@@ -6243,7 +6239,8 @@ expected value."
     NRuns = opts.nruns
 
 
-    bDoContinuous = True
+    bDoContinuous = NRuns > 1 # totally arbitrary...
+
     bGenericInitializationRoutine = False # use this for random graphs which are to be initialized elsewhere
     if opts.loadpicklefile != '':
         if ggraph.NDim == 0:
@@ -6271,48 +6268,54 @@ expected value."
         else:
             ggraph = Initialize(ggraph, opts, True)
 
-       # if ggraph.NDim > 0 and (ggraph.TorLen % 2 == 0):
-        #    if not(ggraph.bBipartiteParityCheck()):
-        #        print("WARNING: For bipartite graphs (e.g. rectuangular arrays), it is strongly recommended to ")
 
-
-        if TMAX < 200: # totally arbitrary; if TMAX >= 200, we assume that we're not going to be doing a convergence study and therefore can dispense with the continuous case
-            for t in range(TMAX):
-                Iterate(ggraph, opts, argdict, True)
-            if ggraph.NDim > 0:
-                thisarrcont = ExportDimGraph(ggraph, True)
-        else:
-            print("Skipping the calculation of the continuous-case evolution.")
-            #if ggraph.NDim > 0:
-            #    thisarrcont =  ExportDimGraph(ggraph, True)
-            
-
+        for t in range(TMAX):
+            Iterate(ggraph, opts, argdict, True)
         if ggraph.NDim > 0:
-            sumamparraycont = np.sum(thisarrcont, ggraph.NDim)
-            sumamparray = np.zeros( tuple([opts.length] * opts.dimension) )
-            sumamparrayctl = copy(sumamparray)
-            sumamparrayx = copy(sumamparray)
-            sumamparrayz = copy(sumamparray)
-            sumamparraye = copy(sumamparray)
-            #sumamparrayzin = copy(sumamparray) 
-            sumampall = np.zeros( tuple([opts.length] * opts.dimension + [2*opts.dimension]) )
+            thisarrcont = ExportDimGraph(ggraph, True)
 
-            sumampallz = copy(sumampall)
-            #sumampallzin = copy(sumampall)
-            sumampallx = copy(sumampall)
-            sumampalle = copy(sumampall)
-            sumampallctl = copy(sumampall)  
-        else:
+
+
+    else:
+        print("Skipping the calculation of the continuous-case evolution.")
+        #if ggraph.NDim > 0:
+        #    thisarrcont =  ExportDimGraph(ggraph, True)
+        
+
+
+    if ggraph.NDim > 0:
+        if bDoContinuous:
+            sumamparraycont = np.sum(thisarrcont, ggraph.NDim)
+        sumamparray = np.zeros( tuple([opts.length] * opts.dimension) )
+        sumamparrayctl = copy(sumamparray)
+        sumamparrayx = copy(sumamparray)
+        sumamparrayz = copy(sumamparray)
+        sumamparraye = copy(sumamparray)
+        #sumamparrayzin = copy(sumamparray) 
+        sumampall = np.zeros( tuple([opts.length] * opts.dimension + [2*opts.dimension]) )
+
+        sumampallz = copy(sumampall)
+        #sumampallzin = copy(sumampall)
+        sumampallx = copy(sumampall)
+        sumampalle = copy(sumampall)
+        sumampallctl = copy(sumampall)  
+    else:
+        if bDoContinuous:
             sumamparraycont = [np.sum(inode.ContAmplitude) for inode in ggraph.NodeVec]
-            sumamparray = np.zeros( ggraph.NNode ).astype("int")
-            sumamparrayctl = copy(sumamparray)
-            sumamparrayx = copy(sumamparray)
-            sumamparrayz = copy(sumamparray)
-            sumamparraye = copy(sumamparray)
-            #sumamparrayzin = copy(sumamparray) 
-            sumampall = CreateZerosFromGraph(ggraph)
+        sumamparray = np.zeros( ggraph.NNode ).astype("int")
+        sumamparrayctl = copy(sumamparray)
+        sumamparrayx = copy(sumamparray)
+        sumamparrayz = copy(sumamparray)
+        sumamparraye = copy(sumamparray)
+        #sumamparrayzin = copy(sumamparray) 
+        sumampall = CreateZerosFromGraph(ggraph)
 
   
+
+
+
+
+
 
 
     bFullPrint = opts.print and opts.dimension == 2
@@ -6323,12 +6326,12 @@ expected value."
         alterr2 = [] 
     
     """
-    f = open('blah.pkl', 'rb')
+    f = open('genericrun.pkl', 'rb')
     resout = pickle.load(f)
     irun0 = resout[0]
     sumamparray = resout[1]
     sumampallctl = resout[2]
-    # f = open('blah.pkl','wb'); pickle.dump((irun, sumamparray, sumampallctl, sumampall, sumampallctl), f)
+    # f = open('genericrun.pkl','wb'); pickle.dump((irun, sumamparray, sumampallctl, sumampall, sumampallctl), f)
     """
 
     
@@ -6346,17 +6349,6 @@ expected value."
         else:
             ggraph = Initialize(ggraph, opts)
 
-        
-        """
-        if not(bGenericInitializationRoutine):
-            if BoundaryConditions == "":
-                centernode = tuple([opts.length//2-1] * opts.dimension)
-            else:
-                InitializerFn(ggraph, opts, centernode)
-        else:
-            if opts.loadpicklefile == '':
-                Initialize(ggraph, opts)
-        """
 
 
 
@@ -6440,12 +6432,8 @@ expected value."
                         print("Run,Time", irun, t, "...")
             ggraph.t = t
             ggraph.irun = irun
-            # you can shuffle the order update  with each step, but I won't bother
+            # you could shuffle the order update  with each step, but here, I won't bother
     
-            #if (irun,t) == (2,2):
-            #    print("here")
-            #    import pdb; pdb.set_trace()
-            
             Iterate(ggraph, opts, argdict)
             
             tarr_print_increment = 1 # 5000# 10
@@ -6687,7 +6675,7 @@ expected value."
 
     #import pdb; pdb.set_trace()
 
-    bGraphics = TMAX >= 1000
+    bGraphics = TMAX >= 200 # purely arbitrary
 
     if bGraphics:
         start = NonZeroSection(absarr)
@@ -6707,20 +6695,15 @@ expected value."
                 lr = linregress(np.log(tarr[start:]), np.log(absarrz[start:])  )
                 plt.plot(tarr[start:],absarrz[start:])      
                 titl = opts.dynamics.capitalize()  + (' total Z-token count (y~t**%.2f)' % (lr.slope,))
+
+                farr = np.exp(lr.intercept + lr.slope * np.log( tarr[start:] ))
+                plt.plot(tarr[start:],farr,color='r')
+                
+                plt.title(titl)
+                plt.show()
+
             else:
                 print("Skipping plots -- not enough non-zero values")
-
-            
-            #plt.plot(tarr, absarr, color='blue', label="Total (regular) particle count")
-            #plt.plot(tarr,absarrz, color='red', label="Total Z-token count")
-            #plt.xlim(0, 250)
-            #plt.ylim(0,1500)
-            #plt.legend()
-            #import pdb; pdb.set_trace()
-            #plt.show()
-
-
-
 
         else:
             start = NonZeroSection(absarr)
@@ -6731,20 +6714,24 @@ expected value."
                 titl = opts.dynamics.capitalize()  + (' total particle count (y~t**%.2f)' % (lr.slope,))
                 plt.title(titl)
                 plt.show()
-                a = np.log(1 + np.array(absarrz))
-                start = NonZeroSection(absarrz)
+                a = np.log(1 + np.array(absarr))
+                start = NonZeroSection(absarr)
 
-                if len(tarr) - start > 20:
-                    plt.plot(tarr[start:],absarrz[start:])      
-                    titl = opts.dynamics.capitalize()  + (' total Z-token count (y~t**%.2f)' % (lr.slope,))            
+                plt.plot(tarr[start:],absarr[start:])      
+                titl = opts.dynamics.capitalize()  + (' total particle count (y~t**%.2f)' % (lr.slope,))            
             
+        
+                farr = np.exp(lr.intercept + lr.slope * np.log( tarr[start:] ))
+                plt.plot(tarr[start:],farr,color='r')
+                
+                plt.title(titl)
+                plt.show()
+
+
+            else:
+                print("Skipping plots -- not enough non-zero values")
     
-        
-        farr = np.exp(lr.intercept + lr.slope * np.log( tarr[start:] ))
-        plt.plot(tarr[start:],farr)
-        
-        plt.title(titl)
-        plt.show()
+
 
         #import pdb; pdb.set_trace()
         #print("For args", ' '.join(sys.argv))
@@ -6758,48 +6745,6 @@ expected value."
 
 
 
-        #import pdb; pdb.set_trace()
-
-        #a = np.log(1 + np.array(tarr))
-        #if opts.dynamics == 'oneplus':
-        #    a = 1 + np.array(tarr)
-        #if ggraph.bNeedZTokens:
-        #    c = np.log(1.0 + np.array(absarrz))
-        #else:
-        #    c = np.log(1.0 + np.array(absarr))
-        #titl = opts.dynamics + ' integ(abs(x))'
-
-        #plt.plot(a,c)
-        #plt.title(titl)
-        #plt.show()
-
-
-        #from scipy.stats import linregress
-        #print(linregress(a, c))
-        
-        #interceptwhenslopeis1 = np.mean(c) - np.mean(a)
-        #print("Then do integ(x_coord*x_coord), for args", ' '.join(sys.argv))
-        #a = np.log(1 + np.array(tarr))
-        #if opts.dynamics == 'oneplus':
-        #    a = 1 + np.array(tarr)
-        # = np.log(1.0 + np.array(sumx2))
-        #titl = opts.dynamics + ' integ(x_coord*x_coord)'
-
-        #plt.plot(a,g)
-        #plt.title(titl)
-        #plt.show()
-
-
-        #from scipy.stats import linregress
-        #print(linregress(a, g))
-        
-        #interceptwhenslopeis1 = np.mean(c) - np.mean(a)
-        #print("Then do integ(abs(x)), for args", ' '.join(sys.argv))
-        #print("intercept if slope is 1.0", interceptwhenslopeis1, np.exp(interceptwhenslopeis1), "sqrt", np.sqrt(np.exp(interceptwhenslopeis1)))
-        #interceptwhenslopeis1half = np.mean(c) - 0.5*np.mean(a)
-        #print("intercept if slope is 0.5", interceptwhenslopeis1half, np.exp(interceptwhenslopeis1half), "sqrt", np.sqrt(np.exp(interceptwhenslopeis1half)))
-
-
 
 
 if __name__ == '__main__':   
@@ -6810,32 +6755,34 @@ if __name__ == '__main__':
 
 """
 
-f = open('blahbose_20260211.pkl', 'wb'); pickle.dump((tarr, absarr, l2arr), f); f.close()
+# some old helper routines...
 
-os.chdir("/Users/hrvojehrgovcic/quant/lattice_datasets_for_papers/ZTokenEvolution/")
+f = open('genericrunbose_20260211.pkl', 'wb'); pickle.dump((tarr, absarr, l2arr), f); f.close()
+
+os.chdir("")
 
 import pickle
-f = open('blah.pkl', 'rb')
+f = open('genericrun.pkl', 'rb')
 ggrid = pickle.load(f)
 f.close()
 
-f = open('blah3.pkl', 'rb')
+f = open('genericrun3.pkl', 'rb')
 coords,nodes,coordpath = pickle.load(f)
 f.close()
 
 
 #####
-f = open('blahpure.pkl', 'rb'); 
+f = open('genericrunpure.pkl', 'rb'); 
 blobpure = pickle.load(f)
 tarr = blobpure[0]; absarrpure = blobpure[1]
 f.close()
 
-f = open('blahmodp.pkl', 'rb'); 
+f = open('genericrunmodp.pkl', 'rb'); 
 blobmodp = pickle.load(f)
 tarr = blobmodp[0]; absarrmodp = blobmodp[1]
 f.close()
 
-f = open('blahbose_20260209.pkl', 'rb'); 
+f = open('genericrunbose_20260209.pkl', 'rb'); 
 blobbose = pickle.load(f)
 tarr = blobbose[0]; absarrbose = blobbose[1]
 f.close()
