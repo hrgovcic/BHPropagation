@@ -1,5 +1,3 @@
-#!/cygdrive/c/Python27/python
-
 import sys
 import os
 import optparse
@@ -17,8 +15,8 @@ import pickle
 
 import matplotlib.pyplot as plt      
 import random as rn
-#from bisect import bisect_left
-import bisect
+
+#import bisect
 import scipy.stats as stats
 from scipy.stats import linregress
 import textwrap
@@ -44,43 +42,50 @@ bPrintDesc = False
 if bPrintDesc:
     print("""
 
-These programs construct a generic graph with continuous, integer (and also Z-token) amplitudes. See paper for clarification.
+These programs constructs a generic graph with continuous, integer (and also Z-token) amplitudes. See paper for clarification.
 
-We will then proceed to define heat-propagation (i.e. random walk), modpool heat-prop, B-H propagation, modpool B-H prop
-(and eventually, boson and fermion versions, with the former employing a bath of Z-tokens, which ensure that no
+It can be used to generate particle-based models heat-propagation (i.e. random walks of said particles), 
+modpool heat-prop, B-H propagation, modpool B-H prop (and eventually, fermion versions, which involve 
+constructing a bath of Z-tokens, with the goal of ensuring that no
 outgoing edge has a value other than -1, 0, or 1 -- i.e. it satisfies a Pauli Exclusion principle). We can also 
 set the maximum particle absolute amplitude to some number > 1 (as studied by Gentile).
 
 To avoid clutter, we have omitted the implementation of "naive regularization" which consists merely of spewing 
 particle-antiparticle pairs whenever doing so at a given node would reduce the overall outgoing particle number. 
+However, numerous legacy routines remain, since they may prove useful to those seeking to modify the code.
 
-Note that in this program we use Amplitude to define the count at a given arc of a node. In the paper we reserve amplitude
-for the sum of the particle counts at all the arcs leading into (or out of) a node.
+Note that in this program we use 'amplitude' to define the count at a given arc of a node. Whereas un the paper, 
+amplitude refers to the expected sum of the particle counts at all the arcs leading into (or out of) a node.
 
-Also note that the graphs here may be randomly generated to satisfy some basic properties about their respective
-adjacency matrices and their average number of neighbors and so forth. They will be suitable for
-generating waves only if their random walk distributions are Gaussian (with the same k). 
-So while the D-dimensional rectangular lattices satisfy that criterion (if they're large enough for 
-particle densities to be quasi-continuous) the other graphs might not even have a well-defined Euclidean dimension. 
-Even so, we can still generate random walks and Brownian-Huygens propagation (and variations thereof) on their 
-nodes, and see how the overall particle number grows with time.
+Also note that the graphs here may be randomly generated to satisfy some basic properties about their 
+respective connection matrices and their average number of neighbors and so forth. They will be suitable 
+for generating waves only if their random walk distributions are Gaussian (with the same k). So while 
+the D-dimensional rectangular lattices satisfy that criterion (if they're large enough for particle 
+densities to be quasi-continuous), the other graphs will likely not even have a well-defined Euclidean 
+dimension. Even so, we can still generate random walks and Brownian-Huygens propagation (and variations 
+thereof) on their nodes, and see how the total number of particles and antiparticles grows with time.
 
-At any point, any generated graph, call it Xgraph, can be saved to some pickle file named "Xpickle.pkl" by invoking the 
-command SaveGraph(Xgraph, "Xpickle.pkl"), and then analyzed at some later point for its adjacency matrix, particle distribution, etc.
+At any point, any generated graph, call it Xgraph, can be saved to some pickle file named "Xpickle.pkl" 
+by invoking the command SaveGraph(Xgraph, "Xpickle.pkl"), and then analyzed at some later point for 
+its connection matrix, particle distribution, etc. As described in the internal tutorial, it is 
+also possible to create graphs by way of a modification of an adjacency matrix.
 
-The code here allows for a given imput configuration to be generated many times (as for a Monte Carlo simulation)
-in order to verify that the expected number of particles matches the continuous case (or the ModPool case -- again,
-see the paper for clarification) for a high enough number of runs.
- In the special case of a 2-d graph of length 4 in either dimension we can use
-the --print option to generate helpful 4x4 diagrams of the evolution of the graph. This proved very useful for debugging.
-With minor modification, one can use this approach to observe any 4-by-4 quadrant of a graph (or a 2-D 4x4 slice of
-some larger graph). Also, various  modules beginning with "Export" are used to obtain matrix representations of
-2-D graphs, which also proved very handy. Testing any set of dynamics was done by way  of integrating the squared
-error w.r.t. the continuous (floating-point) case corresponding to any initial configuration and number of time steps.
-(This is is refered to as chi-squared in the code.)
+The code here allows for a given input configuration, i.e. boundary condition, to be iterated for 
+a certain number of steps many times (as for a Monte Carlo simulation) in order to verify that the 
+expected number of particles matches the continuous case (or the ModPool case -- again, see the paper 
+for clarification) for a high enough number of runs.
 
-The  ModPool version was also computed along with any fermi/bose attempt, so that the convergence  of the Fermi/Bose dynamics can be compared to the
-more straightforward ModPool version.
+In the special case of a 2-D graph of length 4 in either dimension we can use the --print option 
+to generate helpful 4x4 diagrams of the evolution of the graph. This has proved very useful for 
+debugging. With minor modification, one can use this approach to observe any 4-by-4 quadrant of 
+a graph (or a 2-D 4x4 slice of some larger graph). Also, various modules beginning with "Export" 
+are used to obtain matrix representations of 2-D graphs, which also proved to be very handy. 
+Testing any set of dynamics was done by way of integrating the squared error w.r.t. the 
+continuous (floating-point) case corresponding to any initial configuration and number of 
+time steps. (This is is refered to as chi-squared in the code.)
+
+The ModPool version is also computed along with any whorl-regularized attempt, so that the 
+convergence of the Fermi dynamics can be compared to the more straightforward ModPool (Bose) version.
 
 Here is a sample script for observing chi-squared error inside ipython:
 
@@ -96,15 +101,7 @@ Propagation, proportional to the square root of time in the case of ModPool (or 
 or else, bounded (barring the usual momentary spikes that can be brushed off as another quantum fluctuation). Search
 on linregress(tarr, absarr) to see how this was done.
 
- %run  thisfile.py --dim 2 --length 8 --steps 1000 --dynamics bose  --seed 579289 --runs 1  --boundaryconditions InitializeDiracDelta
-
-Note that 'bose' dynamics simply means a dynamics for which there is a generalized Pauli Exclusion Principle
-that mandates that the particle count never exceeds M (where M is given by --limit, or if that is absent, is 1).
-In other words, the following switches: --dynamics bose --limit 1 
-will give the same dynamics as for Fermi particles, in the sense that both obey the (standard) Pauli Exclusion Principle. 
-
-
-
+ %run  thisfile.py --dim 2 --length 8 --steps 1000 --dynamics pauli --limit 3  --seed 579289 --runs 1  --boundaryconditions InitializeDiracDelta
 
 
 
@@ -113,12 +110,7 @@ will give the same dynamics as for Fermi particles, in the sense that both obey 
 CUTOFF = 0
 
 
-
-
-
-
-
-
+# old legacy  routine
 def MonteCarlo(D, R, nruns=15, nstep=5):
     # generate a bunch (of size nruns) of random walks, each  of of length nstep
     nsuccess = 0
@@ -317,10 +309,6 @@ def PDEGauss(D,R,k=1,t=1,NSteps=100):
                             retval += grid[i,j,k,m]
         print("var %f sd  %f %f" % (sumvar, np.sqrt(sumvar), np.sum(np.sum(np.sum(np.sum(grid))))))
         return orighist, retval, np.sum( grid[lo:hi, lo:hi, lo:hi, lo:hi] )
-
-
-
-
 
 
 def PDETouch(D,R,k=1,t=1,NSteps=100):
@@ -770,15 +758,15 @@ class node_t():
         self.Neighbors = [] # here, every element of the list is of type neighbor_t
         self.FromNbr = []
         self.Amplitude = [] 
-        self.ContAmplitude = []
+        self.AmplitudeCont = []
         self.AmplitudeCtl = [] # this is the "control" i.e. the pure ModPool case which both the Fermi and Bose models must replicate at each node (when in/out arcs are summed)
         self.Scratch = [] # we calc next step here until ALL the nodes are updated, and then we this into Amplitude -- otherwise, some ainitial amplitudes get wiped out
         self.ScratchCtl = []
-        self.ContScratch = [] # we calc next step here until ALL the nodes are updated, and then we this into Amplitude -- otherwise, some ainitial amplitudes get wiped out
+        self.ScratchCont = [] # we calc next step here until ALL the nodes are updated, and then we this into Amplitude -- otherwise, some ainitial amplitudes get wiped out
         self.PrevAmplitude = []
         self.Parity = -1 # this is for the D-dimensional array cases, and is 0 if the sum of the components of the coordinate representation
         self.Coords = [] # only assigned in the case graph is a D-dimensional array
-        self.ZAmplitude = [] 
+        self.AmplitudeZ = [] 
         self.ZScratch = []
 
 
@@ -808,11 +796,7 @@ class graph_t():
 
         self.bNeedZTokens = False
 
-
-        #these are used only for debugging -- get rid of them
-        self.irun = 0
-        self.t = 0
-        
+       
 
 
     def GetFromNodeNbr(self, ):
@@ -865,7 +849,7 @@ class graph_t():
         return myret
 
     def SumAbsZ(self,bPrint=True):
-        myret = np.sum([np.abs(inode.ZAmplitude) for inode in self.NodeVec])
+        myret = np.sum([np.abs(inode.AmplitudeZ) for inode in self.NodeVec])
         if bPrint:
             print("SumabsZ ", myret)
         return myret
@@ -891,7 +875,7 @@ class graph_t():
 
 
     def SumAmpZ(self,bPrint=True):
-        myret = np.sum([np.sum(inode.ZAmplitude) for inode in self.NodeVec])
+        myret = np.sum([np.sum(inode.AmplitudeZ) for inode in self.NodeVec])
         if bPrint:
             print("SumampZ ", myret)
         return myret
@@ -899,14 +883,14 @@ class graph_t():
 
 
     def SumAbsZ(self,bPrint=True):
-        myret = np.sum([np.sum(np.abs(inode.ZAmplitude)) for inode in self.NodeVec])
+        myret = np.sum([np.sum(np.abs(inode.AmplitudeZ)) for inode in self.NodeVec])
         if bPrint:
             print("SumabsZ ", myret)
         return myret
 
 
     def SumAmpCont(self,bPrint=True):
-        myret = np.sum([np.sum(inode.ContAmplitude) for inode in self.NodeVec])
+        myret = np.sum([np.sum(inode.AmplitudeCont) for inode in self.NodeVec])
         if bPrint:
             print("Sumampcont ", myret)
         return myret
@@ -933,7 +917,7 @@ class graph_t():
         sumx = 0
         sumx2 = 0
         for inode in self.NodeVec:
-            x = np.sum(inode.ZAmplitude)
+            x = np.sum(inode.AmplitudeZ)
             sumx += x
             sumx2 += x * x
         myret = sumx, sumx2
@@ -1131,11 +1115,11 @@ def ZeroNode(ggraph):
         N = len(inod.Neighbors)
         inod.PrevAmplitude = [0 for i in range(N)]
         inod.Amplitude = [0 for i in range(N)]
-        inod.ContAmplitude = [0 for i in range(N)]
+        inod.AmplitudeCont = [0 for i in range(N)]
         inod.AmplitudeCtl = [0 for i in range(N)]
         if ggraph.bNeedZTokens:
-            inod.ZAmplitude = [0 for i in range(N)]
-            #inod.ZAmplitudeIn = [0 for i in range(N)]
+            inod.AmplitudeZ = [0 for i in range(N)]
+            #inod.AmplitudeZIn = [0 for i in range(N)]
 
 def SumAmp(ggraph, bAbs=False):
     sumamp = 0
@@ -1635,7 +1619,7 @@ def InitializeDiracDelta(ggraph, opts, x0_coords, continuous=False):
     #print(x0_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = 1
     else:
         ggraph.NodeVec[i].Amplitude[0] = 1
         ggraph.NodeVec[i].AmplitudeCtl[0] = 1
@@ -1652,7 +1636,7 @@ def InitializeDiracDelta2(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 2
+        ggraph.NodeVec[i].AmplitudeCont[0] = 2
     else:
         ggraph.NodeVec[i].Amplitude[0] = 2
         ggraph.NodeVec[i].AmplitudeCtl[0] = 2
@@ -1669,7 +1653,7 @@ def InitializeDiracDelta4(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 4
+        ggraph.NodeVec[i].AmplitudeCont[0] = 4
     else:
         ggraph.NodeVec[i].Amplitude[0] = 4
         ggraph.NodeVec[i].AmplitudeCtl[0] = 4
@@ -1690,9 +1674,9 @@ def InitializeWhorl(ggraph, opts, x0_coords, continuous=False):
     # add a whorl at i in the 0 and 3 direction (feel free to alter all that around)
     WhorlAmp = 2
     ggraph.NodeVec[i].Amplitude[0] += WhorlAmp
-    ggraph.NodeVec[i].ZAmplitude[0] += WhorlAmp
+    ggraph.NodeVec[i].AmplitudeZ[0] += WhorlAmp
     ggraph.NodeVec[i].Amplitude[3] += WhorlAmp
-    ggraph.NodeVec[i].ZAmplitude[3] += WhorlAmp
+    ggraph.NodeVec[i].AmplitudeZ[3] += WhorlAmp
 
 
 
@@ -1714,8 +1698,8 @@ def InitializeNaiveRegEmission(ggraph, opts, x0_coords, continuous=False):
 
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = InitAmp
-        ggraph.NodeVec[j].ContAmplitude[1] = -InitAmp
+        ggraph.NodeVec[i].AmplitudeCont[0] = InitAmp
+        ggraph.NodeVec[j].AmplitudeCont[1] = -InitAmp
     else:
         ggraph.NodeVec[i].Amplitude[0] = InitAmp
         ggraph.NodeVec[i].AmplitudeCtl[0] = InitAmp
@@ -1741,8 +1725,8 @@ def InitializeNaiveRegEmissionWWhorl(ggraph, opts, x0_coords, continuous=False):
 
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = InitAmp
-        ggraph.NodeVec[j].ContAmplitude[1] = -InitAmp
+        ggraph.NodeVec[i].AmplitudeCont[0] = InitAmp
+        ggraph.NodeVec[j].AmplitudeCont[1] = -InitAmp
 
     else:
         ggraph.NodeVec[i].Amplitude[0] = InitAmp
@@ -1753,9 +1737,9 @@ def InitializeNaiveRegEmissionWWhorl(ggraph, opts, x0_coords, continuous=False):
         # add a whorl at i in the 0 and 3 direction (feel free to alter all that around)
         WhorlAmp = 2
         ggraph.NodeVec[i].Amplitude[0] += WhorlAmp
-        ggraph.NodeVec[i].ZAmplitude[0] += WhorlAmp
+        ggraph.NodeVec[i].AmplitudeZ[0] += WhorlAmp
         ggraph.NodeVec[i].Amplitude[3] += WhorlAmp
-        ggraph.NodeVec[i].ZAmplitude[3] += WhorlAmp
+        ggraph.NodeVec[i].AmplitudeZ[3] += WhorlAmp
 
 
 
@@ -1777,8 +1761,8 @@ def InitializeNaiveRegEmissionWTokens(ggraph, opts, x0_coords, continuous=False)
 
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = InitAmp
-        ggraph.NodeVec[j].ContAmplitude[1] = -InitAmp
+        ggraph.NodeVec[i].AmplitudeCont[0] = InitAmp
+        ggraph.NodeVec[j].AmplitudeCont[1] = -InitAmp
 
     else:
         ggraph.NodeVec[i].Amplitude[0] = InitAmp
@@ -1789,9 +1773,9 @@ def InitializeNaiveRegEmissionWTokens(ggraph, opts, x0_coords, continuous=False)
         # add a whorl at i in the 0 and 3 direction (feel free to alter all that around)
         WhorlAmp = -InitAmp
         ggraph.NodeVec[i].Amplitude[0] += WhorlAmp
-        ggraph.NodeVec[i].ZAmplitude[0] += WhorlAmp
+        ggraph.NodeVec[i].AmplitudeZ[0] += WhorlAmp
         ggraph.NodeVec[i].Amplitude[3] += WhorlAmp
-        ggraph.NodeVec[i].ZAmplitude[3] += WhorlAmp
+        ggraph.NodeVec[i].AmplitudeZ[3] += WhorlAmp
 
 
 
@@ -1819,10 +1803,10 @@ def InitializeIncoming3pos1neg(ggraph, opts, x0_coords, continuous=False):
     
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[i2].ContAmplitude[3] = -1
-        ggraph.NodeVec[i3].ContAmplitude[0] = 1
-        ggraph.NodeVec[i4].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[i2].AmplitudeCont[3] = -1
+        ggraph.NodeVec[i3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[i4].AmplitudeCont[1] = 1
     else:
         ggraph.NodeVec[i].Amplitude[2] = 1
         ggraph.NodeVec[i2].Amplitude[3] = -1
@@ -1887,25 +1871,25 @@ def Initialize8off(ggraph, opts, x0_coords, continuous=False):
     
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[i2].ContAmplitude[3] = -1
-        ggraph.NodeVec[i3].ContAmplitude[0] = 1
-        ggraph.NodeVec[i4].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[i2].AmplitudeCont[3] = -1
+        ggraph.NodeVec[i3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[i4].AmplitudeCont[1] = 1
 
-        ggraph.NodeVec[j].ContAmplitude[2] = -1
-        ggraph.NodeVec[j2].ContAmplitude[3] = 1
-        ggraph.NodeVec[j3].ContAmplitude[0] = 1
-        ggraph.NodeVec[j4].ContAmplitude[1] = 1
+        ggraph.NodeVec[j].AmplitudeCont[2] = -1
+        ggraph.NodeVec[j2].AmplitudeCont[3] = 1
+        ggraph.NodeVec[j3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[j4].AmplitudeCont[1] = 1
 
-        ggraph.NodeVec[k].ContAmplitude[2] = -1
-        ggraph.NodeVec[k2].ContAmplitude[3] = -1
-        ggraph.NodeVec[k3].ContAmplitude[0] = -1
-        ggraph.NodeVec[k4].ContAmplitude[1] = -1 * -1
+        ggraph.NodeVec[k].AmplitudeCont[2] = -1
+        ggraph.NodeVec[k2].AmplitudeCont[3] = -1
+        ggraph.NodeVec[k3].AmplitudeCont[0] = -1
+        ggraph.NodeVec[k4].AmplitudeCont[1] = -1 * -1
 
-        ggraph.NodeVec[m].ContAmplitude[2] = 1
-        ggraph.NodeVec[m2].ContAmplitude[3] = 1
-        ggraph.NodeVec[m3].ContAmplitude[0] = -1
-        ggraph.NodeVec[m4].ContAmplitude[1] = 1
+        ggraph.NodeVec[m].AmplitudeCont[2] = 1
+        ggraph.NodeVec[m2].AmplitudeCont[3] = 1
+        ggraph.NodeVec[m3].AmplitudeCont[0] = -1
+        ggraph.NodeVec[m4].AmplitudeCont[1] = 1
 
 
 
@@ -1997,26 +1981,26 @@ def Initialize8offA(ggraph, opts, x0_coords, continuous=False):
       
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[i2].ContAmplitude[3] = -1
-        ggraph.NodeVec[i3].ContAmplitude[0] = 1
-        ggraph.NodeVec[i4].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[i2].AmplitudeCont[3] = -1
+        ggraph.NodeVec[i3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[i4].AmplitudeCont[1] = 1
 
-        ggraph.NodeVec[j].ContAmplitude[2] = -1
-        ggraph.NodeVec[j2].ContAmplitude[3] = 1
-        ggraph.NodeVec[j3].ContAmplitude[0] = 1
-        ggraph.NodeVec[j4].ContAmplitude[1] = 1
+        ggraph.NodeVec[j].AmplitudeCont[2] = -1
+        ggraph.NodeVec[j2].AmplitudeCont[3] = 1
+        ggraph.NodeVec[j3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[j4].AmplitudeCont[1] = 1
 
 
-        ggraph.NodeVec[k].ContAmplitude[2] = 1
-        ggraph.NodeVec[k2].ContAmplitude[3] = 1
-        ggraph.NodeVec[k3].ContAmplitude[0] = 1
-        ggraph.NodeVec[k4].ContAmplitude[1] = -1 
+        ggraph.NodeVec[k].AmplitudeCont[2] = 1
+        ggraph.NodeVec[k2].AmplitudeCont[3] = 1
+        ggraph.NodeVec[k3].AmplitudeCont[0] = 1
+        ggraph.NodeVec[k4].AmplitudeCont[1] = -1 
 
-        ggraph.NodeVec[m].ContAmplitude[2] = 1
-        ggraph.NodeVec[m2].ContAmplitude[3] = 1
-        ggraph.NodeVec[m3].ContAmplitude[0] = -1
-        ggraph.NodeVec[m4].ContAmplitude[1] = 1
+        ggraph.NodeVec[m].AmplitudeCont[2] = 1
+        ggraph.NodeVec[m2].AmplitudeCont[3] = 1
+        ggraph.NodeVec[m3].AmplitudeCont[0] = -1
+        ggraph.NodeVec[m4].AmplitudeCont[1] = 1
 
 
 
@@ -2086,10 +2070,10 @@ def Initialize2CollideHeadOn(ggraph, opts, x0_coords, continuous=False):
     
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[i2].ContAmplitude[3] = -1
-        #ggraph.NodeVec[i3].ContAmplitude[0] = 1
-        #ggraph.NodeVec[i4].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[i2].AmplitudeCont[3] = -1
+        #ggraph.NodeVec[i3].AmplitudeCont[0] = 1
+        #ggraph.NodeVec[i4].AmplitudeCont[1] = 1
     else:
         ggraph.NodeVec[i].Amplitude[2] = 1
         ggraph.NodeVec[i2].Amplitude[3] = -1
@@ -2121,10 +2105,10 @@ def Initialize2CollideHeadOnSameSign(ggraph, opts, x0_coords, continuous=False):
     
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[i2].ContAmplitude[3] = 1
-        #ggraph.NodeVec[i3].ContAmplitude[0] = 1
-        #ggraph.NodeVec[i4].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[i2].AmplitudeCont[3] = 1
+        #ggraph.NodeVec[i3].AmplitudeCont[0] = 1
+        #ggraph.NodeVec[i4].AmplitudeCont[1] = 1
     else:
         ggraph.NodeVec[i].Amplitude[2] = 1
         ggraph.NodeVec[i2].Amplitude[3] = 1
@@ -2148,7 +2132,7 @@ def Initialize1whorlA(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 0
+        ggraph.NodeVec[i].AmplitudeCont[0] = 0
     else:
         
         ggraph.NodeVec[i].AmplitudeCtl[0] = 0
@@ -2159,9 +2143,9 @@ def Initialize1whorlA(ggraph, opts, x0_coords, continuous=False):
         # now add a loaded token/antitoken pair
         #import pdb; pdb.set_trace()
         ggraph.NodeVec[i].Amplitude[1] += 1
-        ggraph.NodeVec[i].ZAmplitude[1] += 1
+        ggraph.NodeVec[i].AmplitudeZ[1] += 1
         ggraph.NodeVec[i].Amplitude[0] += -1
-        ggraph.NodeVec[i].ZAmplitude[0] += -1
+        ggraph.NodeVec[i].AmplitudeZ[0] += -1
 
 
     #ggraph.NodeVec[i].Amplitude[2] = -1
@@ -2177,7 +2161,7 @@ def Initialize1shift(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
     #print(x0_coords)
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = 1
     else:
         
         ggraph.NodeVec[i].AmplitudeCtl[0] = 1
@@ -2187,9 +2171,9 @@ def Initialize1shift(ggraph, opts, x0_coords, continuous=False):
 
         # now add a loaded token/antitoken pair
         ggraph.NodeVec[i].Amplitude[1] += -1
-        ggraph.NodeVec[i].ZAmplitude[1] += 1
+        ggraph.NodeVec[i].AmplitudeZ[1] += 1
         ggraph.NodeVec[i].Amplitude[0] += -1
-        ggraph.NodeVec[i].ZAmplitude[0] += -1
+        ggraph.NodeVec[i].AmplitudeZ[0] += -1
 
 
     #ggraph.NodeVec[i].Amplitude[2] = -1
@@ -2209,8 +2193,8 @@ def Initialize2offC(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = -1
-        ggraph.NodeVec[j].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = -1
+        ggraph.NodeVec[j].AmplitudeCont[1] = 1
     else:
         ggraph.NodeVec[i].Amplitude[0] = -1
         ggraph.NodeVec[j].Amplitude[1] = 1
@@ -2235,8 +2219,8 @@ def Initialize2offD(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 1
-        ggraph.NodeVec[j].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = 1
+        ggraph.NodeVec[j].AmplitudeCont[1] = 1
     else:
         ggraph.NodeVec[i].Amplitude[0] = 1
         ggraph.NodeVec[j].Amplitude[1] = 1
@@ -2274,11 +2258,11 @@ def Initialize1cluster(ggraph, opts, x0_coords):
 
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = -1
-        ggraph.NodeVec[i_upx].ContAmplitude[1] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = -1
+        ggraph.NodeVec[i_upx].AmplitudeCont[1] = 1
 
-        ggraph.NodeVec[i_upxy].ContAmplitude[3] = 1
-        ggraph.NodeVec[i_upxdny].ContAmplitude[2] = 1
+        ggraph.NodeVec[i_upxy].AmplitudeCont[3] = 1
+        ggraph.NodeVec[i_upxdny].AmplitudeCont[2] = 1
     else:
 
         ggraph.NodeVec[i].Amplitude[0] = -1
@@ -2316,8 +2300,8 @@ def Initialize1shift(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] += 1
-        #ggraph.NodeVec[i].ContAmplitude[2] += -1
+        ggraph.NodeVec[i].AmplitudeCont[0] += 1
+        #ggraph.NodeVec[i].AmplitudeCont[2] += -1
     else:
         ggraph.NodeVec[i].Amplitude[0] += 1
         ggraph.NodeVec[i].AmplitudeCtl[0] += 1
@@ -2325,10 +2309,10 @@ def Initialize1shift(ggraph, opts, x0_coords, continuous=False):
 
         # now overlay the whorl
         ggraph.NodeVec[i].Amplitude[0] += -1
-        ggraph.NodeVec[i].ZAmplitude[0] += -1
+        ggraph.NodeVec[i].AmplitudeZ[0] += -1
 
         ggraph.NodeVec[i].Amplitude[2] += 1
-        ggraph.NodeVec[i].ZAmplitude[2] += 1
+        ggraph.NodeVec[i].AmplitudeZ[2] += 1
 
 
 
@@ -2354,8 +2338,8 @@ def Initialize2shift(ggraph, opts, x0_coords, continuous=False):
     i = FindNode(ggraph, x0_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] += 1
-        ggraph.NodeVec[i].ContAmplitude[2] += -1
+        ggraph.NodeVec[i].AmplitudeCont[0] += 1
+        ggraph.NodeVec[i].AmplitudeCont[2] += -1
     else:
         ggraph.NodeVec[i].Amplitude[0] += 1
         ggraph.NodeVec[i].Amplitude[2] += -1
@@ -2364,10 +2348,10 @@ def Initialize2shift(ggraph, opts, x0_coords, continuous=False):
 
         # now overlay the whorl
         ggraph.NodeVec[i].Amplitude[0] += -1
-        ggraph.NodeVec[i].ZAmplitude[0] += -1
+        ggraph.NodeVec[i].AmplitudeZ[0] += -1
 
         ggraph.NodeVec[i].Amplitude[2] += 1
-        ggraph.NodeVec[i].ZAmplitude[2] += 1
+        ggraph.NodeVec[i].AmplitudeZ[2] += 1
 
 
 
@@ -2392,17 +2376,17 @@ def Initialize1Zwhorl(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        pass # ggraph.NodeVec[i].ContAmplitude[0] = 1
+        pass # ggraph.NodeVec[i].AmplitudeCont[0] = 1
     else:
         #ggraph.NodeVec[i].Amplitude[0] = 1
         #ggraph.NodeVec[i].Amplitude[0] = -1
         #ggraph.NodeVec[i].Amplitude[2] = 1
 
 
-        ggraph.NodeVec[i].ZAmplitude[0] = -1
-        ggraph.NodeVec[i].ZAmplitude[2] = 1
-        ggraph.NodeVec[j].ZAmplitude[3] = 1
-        ggraph.NodeVec[j].ZAmplitude[1] = -1
+        ggraph.NodeVec[i].AmplitudeZ[0] = -1
+        ggraph.NodeVec[i].AmplitudeZ[2] = 1
+        ggraph.NodeVec[j].AmplitudeZ[3] = 1
+        ggraph.NodeVec[j].AmplitudeZ[1] = -1
           
         #ggraph.NodeVec[i].AmplitudeCtl[0] = 1
     #ggraph.NodeVec[i].Amplitude[2] = -1
@@ -2418,10 +2402,10 @@ def Initialize2off(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = -1
-        #ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[j].ContAmplitude[3] = 1
-        #ggraph.NodeVec[j].ContAmplitude[1] = -1
+        ggraph.NodeVec[i].AmplitudeCont[0] = -1
+        #ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[j].AmplitudeCont[3] = 1
+        #ggraph.NodeVec[j].AmplitudeCont[1] = -1
 
     else:
 
@@ -2458,10 +2442,10 @@ def Initialize2CollideAngle(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = -1
-        #ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[j].ContAmplitude[3] = 1
-        #ggraph.NodeVec[j].ContAmplitude[1] = -1
+        ggraph.NodeVec[i].AmplitudeCont[0] = -1
+        #ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[j].AmplitudeCont[3] = 1
+        #ggraph.NodeVec[j].AmplitudeCont[1] = -1
 
     else:
 
@@ -2498,10 +2482,10 @@ def Initialize2CollideAngleSameSign(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 1
-        #ggraph.NodeVec[i].ContAmplitude[2] = 1
-        ggraph.NodeVec[j].ContAmplitude[3] = 1
-        #ggraph.NodeVec[j].ContAmplitude[1] = -1
+        ggraph.NodeVec[i].AmplitudeCont[0] = 1
+        #ggraph.NodeVec[i].AmplitudeCont[2] = 1
+        ggraph.NodeVec[j].AmplitudeCont[3] = 1
+        #ggraph.NodeVec[j].AmplitudeCont[1] = -1
 
     else:
 
@@ -2532,7 +2516,7 @@ def Initialize1plaquette(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if False: #continuous:
-        ggraph.NodeVec[i].ContAmplitude[0] = 1
+        ggraph.NodeVec[i].AmplitudeCont[0] = 1
     else:
         ggraph.NodeVec[i].Amplitude[0] = -1
         ggraph.NodeVec[i].Amplitude[2] = 1
@@ -2568,7 +2552,7 @@ def Initialize1plaquetteZ(ggraph, opts, x0_coords, continuous=False):
     j = FindNode(ggraph, x1_coords)
 
     if continuous:
-        #ggraph.NodeVec[i].ContAmplitude[0] = 1
+        #ggraph.NodeVec[i].AmplitudeCont[0] = 1
 
         #ggraph.NodeVec[i].AmplitudeCtl[0] = +1
         #ggraph.NodeVec[i].AmplitudeCtl[2] = -1
@@ -2577,10 +2561,10 @@ def Initialize1plaquetteZ(ggraph, opts, x0_coords, continuous=False):
         pass
 
     else:
-        ggraph.NodeVec[i].ZAmplitude[0] = -1
-        ggraph.NodeVec[i].ZAmplitude[2] = 1
-        ggraph.NodeVec[j].ZAmplitude[3] = 1
-        ggraph.NodeVec[j].ZAmplitude[1] = -1
+        ggraph.NodeVec[i].AmplitudeZ[0] = -1
+        ggraph.NodeVec[i].AmplitudeZ[2] = 1
+        ggraph.NodeVec[j].AmplitudeZ[3] = 1
+        ggraph.NodeVec[j].AmplitudeZ[1] = -1
 
         #ggraph.NodeVec[i].AmplitudeCtl[0] = +1
         #ggraph.NodeVec[i].AmplitudeCtl[2] = -1
@@ -2652,7 +2636,7 @@ def SaveAdjacencyList(ggraph, csvfilename):
             precomma = ""
             if len(thisline) > 0:
                 precomma = ","
-            thisline = thisline + precomma + ("%d;%d;%d" % (ggraph.NodeVec[i].Neighbors[iinbr], ggraph.NodeVec[i].Amplitude[iinbr], ggraph.NodeVec[i].ZAmplitude[iinbr]))
+            thisline = thisline + precomma + ("%d;%d;%d" % (ggraph.NodeVec[i].Neighbors[iinbr], ggraph.NodeVec[i].Amplitude[iinbr], ggraph.NodeVec[i].AmplitudeZ[iinbr]))
         theselines.append(thisline)
     
     f = open(csvfilename, 'w')
@@ -2661,7 +2645,7 @@ def SaveAdjacencyList(ggraph, csvfilename):
 
 def PrintGraphByNode(ggraph, bCont=False):
     for i in range(ggraph.NNode):
-        print(i, "amp", ggraph.NodeVec[i].Amplitude, "z", ggraph.NodeVec[i].ZAmplitude, "ctl", ggraph.NodeVec[i].AmplitudeCtl, "cont", ggraph.NodeVec[i].ContAmplitude)
+        print(i, "amp", ggraph.NodeVec[i].Amplitude, "z", ggraph.NodeVec[i].AmplitudeZ, "ctl", ggraph.NodeVec[i].AmplitudeCtl, "cont", ggraph.NodeVec[i].AmplitudeCont)
     
 
 def CreateGraphFromAdjacencyList(csvfilename):
@@ -2689,12 +2673,12 @@ def CreateGraphFromAdjacencyList(csvfilename):
             thisnode.Neighbors.append(thislist[0])
             thisnode.Amplitude.append(thislist[1])
             thisnode.AmplitudeCtl.append(thislist[1])
-            thisnode.ContAmplitude.append(thislist[1])
-            thisnode.ZAmplitude.append(thislist[2])
+            thisnode.AmplitudeCont.append(thislist[1])
+            thisnode.AmplitudeZ.append(thislist[2])
         thisnode.Scratch = [0 for i in nodechunks]
         thisnode.ZScratch = [0 for i in nodechunks]
         thisnode.ScratchCtl = [0 for i in nodechunks]
-        thisnode.ContScratch = [0 for i in nodechunks]
+        thisnode.ScratchCont = [0 for i in nodechunks]
         thisnode.PrevAmplitude = [0 for i in nodechunks]
 
 
@@ -4333,7 +4317,7 @@ def FindNonZeroCoordsCtl(ggraph):
 
 def FindNonZeroCoordsZ(ggraph):
     for i in range(len(ggraph.NodeVec)):
-        if np.sum(np.abs(ggraph.NodeVec[i].ZAmplitude)) != 0:
+        if np.sum(np.abs(ggraph.NodeVec[i].AmplitudeZ)) != 0:
             print (ggraph.NodeVec[i].Coords)
             
 
@@ -4906,7 +4890,7 @@ def Iterate(ggraph, opts, argdict, bContinuous=False):
                 inlist_ctl.append(ggraph.NodeVec[inbr].AmplitudeCtl[whichnbr])
 
             if ggraph.bNeedZTokens:
-                inlist_ztoken.append(ggraph.NodeVec[inbr].ZAmplitude[whichnbr]) 
+                inlist_ztoken.append(ggraph.NodeVec[inbr].AmplitudeZ[whichnbr]) 
 
 
         previ = copy(i)
@@ -4916,12 +4900,12 @@ def Iterate(ggraph, opts, argdict, bContinuous=False):
             
             for iinbr, inbr in enumerate(ggraph.NodeVec[i].Neighbors):
                 whichnbr = ggraph.NodeVec[i].FromNbr[iinbr]            
-                inlist.append(ggraph.NodeVec[inbr].ContAmplitude[whichnbr])
+                inlist.append(ggraph.NodeVec[inbr].AmplitudeCont[whichnbr])
             if argdict["CoreFn"] in (ModPoolJustBrownian, PureRandomWalkHeat):
                 floatingoutamp = ModPoolJustBrownian(inlist, True)
             else:
                 floatingoutamp = FloatingPtWave(inlist)
-            ggraph.NodeVec[i].ContScratch = floatingoutamp
+            ggraph.NodeVec[i].ScratchCont = floatingoutamp
         else:
             if argdict["InOutFunction"] != ModPoolJustBrownian:
                 outamp_ctl = ModPool(inlist_ctl)  
@@ -4951,7 +4935,7 @@ def Iterate(ggraph, opts, argdict, bContinuous=False):
     if  bContinuous:
         
         for i in arngshuff:
-            ggraph.NodeVec[i].ContAmplitude = ggraph.NodeVec[i].ContScratch
+            ggraph.NodeVec[i].AmplitudeCont = ggraph.NodeVec[i].ScratchCont
     else:
         for i in arngshuff:
             ggraph.NodeVec[i].Amplitude = ggraph.NodeVec[i].Scratch
@@ -4961,8 +4945,8 @@ def Iterate(ggraph, opts, argdict, bContinuous=False):
 
                 # Note that when exporting to an array (incase of a D-dimensional array setup) 
                 # there needs to be an offsetting Z-amp update at the DESTINATION of the outgoing arc
-                ggraph.NodeVec[i].ZAmplitude = ggraph.NodeVec[i].ZScratch
-                #ggraph.NodeVec[i].ZAmplitudeIn = ggraph.NodeVec[i].ZScratchIn
+                ggraph.NodeVec[i].AmplitudeZ = ggraph.NodeVec[i].ZScratch
+                #ggraph.NodeVec[i].AmplitudeZIn = ggraph.NodeVec[i].ZScratchIn
     
          
  
@@ -5141,7 +5125,7 @@ def ExportDimGraph(ggraph, bCont=False):
             thiscoord = tuple(list(i.Coords) + [idir])
 
             if bCont:
-                retarr[thiscoord] = i.ContAmplitude[idir]
+                retarr[thiscoord] = i.AmplitudeCont[idir]
             else:
                 retarr[thiscoord] = i.Amplitude[idir] 
     return retarr
@@ -5171,7 +5155,7 @@ def ExportDimGraphCtl(ggraph, bCont=False):
             thiscoord = tuple(list(i.Coords) + [idir])
 
             if bCont:
-                retarr[thiscoord] = i.ContAmplitude[idir]
+                retarr[thiscoord] = i.AmplitudeCont[idir]
             else:
                 retarr[thiscoord] = i.AmplitudeCtl[idir] 
     return retarr
@@ -5219,9 +5203,9 @@ def ExportDimGraphx(ggraph, bCont=False):
             thiscoord = tuple(list(i.Coords) + [idir])
 
             if bCont:
-                retarr[thiscoord] = i.ContAmplitude[idir]
+                retarr[thiscoord] = i.AmplitudeCont[idir]
             else:
-                retarr[thiscoord] = i.Amplitude[idir] - i.ZAmplitude[idir]
+                retarr[thiscoord] = i.Amplitude[idir] - i.AmplitudeZ[idir]
     return retarr
 
 
@@ -5245,7 +5229,7 @@ def ZExportDimGraph(ggraph):
         for idir in range(2*ggraph.NDim):
             thiscoord = tuple(list(i.Coords) + [idir])
             if ggraph.bNeedZTokens:
-                retarr[thiscoord] = i.ZAmplitude[idir]
+                retarr[thiscoord] = i.AmplitudeZ[idir]
 
     return retarr
 
@@ -5317,7 +5301,7 @@ def WipeWhorlsAtSingleTime(ggraph, M=0):
 
             inlist.append(ggraph.NodeVec[inbr].Amplitude[whichnbr])
             if ggraph.bNeedZTokens:
-                inlist_ztoken.append(ggraph.NodeVec[inbr].ZAmplitude[whichnbr]) 
+                inlist_ztoken.append(ggraph.NodeVec[inbr].AmplitudeZ[whichnbr]) 
                 inlist_ctl.append(ggraph.NodeVec[inbr].AmplitudeCtl[whichnbr])
         previ = copy(i)
 
@@ -5325,9 +5309,9 @@ def WipeWhorlsAtSingleTime(ggraph, M=0):
             inlist = []
             for iinbr, inbr in enumerate(ggraph.NodeVec[i].Neighbors):
                 whichnbr = ggraph.NodeVec[i].FromNbr[iinbr]            
-                inlist.append(ggraph.NodeVec[inbr].ContAmplitude[whichnbr])
+                inlist.append(ggraph.NodeVec[inbr].AmplitudeCont[whichnbr])
             floatingoutamp = FloatingPtWave(inlist)
-            ggraph.NodeVec[i].ContScratch = floatingoutamp
+            ggraph.NodeVec[i].ScratchCont = floatingoutamp
         else:
 
             ggraph.NodeVec[i].ZScratchIn = inlist_ztoken
@@ -5380,7 +5364,7 @@ def WipeWhorlsAtSingleTime(ggraph, M=0):
         
     if  bContinuous:
         for i in arngshuff:
-            ggraph.NodeVec[i].ContAmplitude = ggraph.NodeVec[i].ContScratch
+            ggraph.NodeVec[i].AmplitudeCont = ggraph.NodeVec[i].ScratchCont
     else:
         for i in arngshuff:
             ggraph.NodeVec[i].Amplitude = ggraph.NodeVec[i].Scratch
@@ -5390,9 +5374,9 @@ def WipeWhorlsAtSingleTime(ggraph, M=0):
 
                 # Note that when exporting to an array (incase of a D-dimensional array setup) 
                 # there needs to be an offsetting Z-amp update at the DESTINATION of the outgoing arc
-                ggraph.NodeVec[i].ZAmplitude = ggraph.NodeVec[i].ZScratch
+                ggraph.NodeVec[i].AmplitudeZ = ggraph.NodeVec[i].ZScratch
                 ggraph.NodeVec[i].AmplitudeCtl = ggraph.NodeVec[i].ScratchCtl
-                #ggraph.NodeVec[i].ZAmplitudeIn = ggraph.NodeVec[i].ZScratchIn
+                #ggraph.NodeVec[i].AmplitudeZIn = ggraph.NodeVec[i].ZScratchIn
 
 
 def CtlExportDimGraph(ggraph): 
@@ -5415,7 +5399,7 @@ def CtlExportDimGraph(ggraph):
         for idir in range(2*ggraph.NDim):
             thiscoord = tuple(list(i.Coords) + [idir])
             retarr[thiscoord] = i.AmplitudeCtl[idir]
-            #if i.ZAmplitude[idir] != 0:
+            #if i.AmplitudeZ[idir] != 0:
             #    print("nana")
             #    import pdb; pdb.set_trace()
     return retarr
@@ -5441,7 +5425,7 @@ def ZInExportDimGraph(ggraph):
         xcoords = coords
         for idir in range(2*ggraph.NDim):
             thiscoord = tuple(list(i.Coords) + [idir])
-            #retarr[thiscoord] = i.ZAmplitudeIn[idir]
+            #retarr[thiscoord] = i.AmplitudeZIn[idir]
     return retarr
 
 
@@ -5494,8 +5478,8 @@ def LocateNonZeroZ(ggraph):
     # For debugging only -- print out the coordinates for a given point
     for inod in ggraph.NodeVec:
         for iinbr, inbr in enumerate(inod.Neighbors):
-            if inod.ZAmplitude[iinbr] != 0:
-                print("NZ irun", ggraph.irun, "t", ggraph.t, "x", inod.Coords, iinbr, inod.ZAmplitude[iinbr])
+            if inod.AmplitudeZ[iinbr] != 0:
+                print("NZ irun", ggraph.irun, "t", ggraph.t, "x", inod.Coords, iinbr, inod.AmplitudeZ[iinbr])
 
 
 
@@ -5651,8 +5635,8 @@ def Main():
 
     fnlist.append((InitializeDiracDelta, 'InitializeDiracDelta', desctxt))
 
-    fnlist.extend([(InitializeDiracDelta2, 'InitializeDiracDelta2', "BoundaryConditions: same as InitializeDiracDelta, but scaled by 2. "),
-        (InitializeDiracDelta4, 'InitializeDiracDelta4', "BoundaryConditions: same as InitializeDiracDelta, but scaled by 4 (therefore potentially problematic in terms of PEP in the 2-D case, and therefore requiring displacement)." ),
+    fnlist.extend([(InitializeDiracDelta2, 'InitializeDiracDelta2', "BoundaryConditions: same as InitializeDiracDelta, but scaled by 2. (Although this technically violates the PEP, all the possible output configurations can be whorl-regularized so as to accommodate the PEP after the first iteration, so the corresponding error check after each iteration is never issued). "),
+        (InitializeDiracDelta4, 'InitializeDiracDelta4', "BoundaryConditions: same as InitializeDiracDelta, but scaled by 4 (same situation as for InitializeDiracDelta2)." ),
         (InitializeIncoming3pos1neg, 'InitializeIncoming3pos1neg', "BoundaryConditions: discrete Dirac delta on edges converging at a node at the center of the lattice; one of the Dirac delta functions will be negated, and in the 2-dimensional case, the subsequent step will correspond to a hodotic solution (see text) of amplitude 2 and will require Z-token shifting. "),
         (Initialize8off, 'Initialize8off', "BoundaryConditions: a configuration of hodotic solutions arranged to force an amplitude of 4 in two steps. "),
         (Initialize8offA, 'Initialize8offA', "BoundaryConditions: much like Initialize8off, but all the initial hodotic solutions are of the same sign."),
@@ -5678,12 +5662,13 @@ def Main():
 
     if bListInitializerFunctions:
 
-        longtxt = "The following is a list of numerous simple boundary conditions \
-(the first word of any paragraph is to be used with the --boundaryconditions parameter in any command line. \
-(Run the full tutorial to see working examples of command lines and, if desired, swap out the listed initializer \
-functions with one of the ones here.) Note that the routines here are for  \
-D-dimensional rectangular graphs (with the two-dimensional case being the most practical one; detailed evolution \
-may be observed for many of these routines with the assistance of the --print option, as noted in the full tutorial):"
+        longtxt = "The following is a list of included boundary conditions \
+(the first word of any paragraph is to be used with the --boundaryconditions parameter in any command line). \
+Consult the full tutorial to see working examples of command lines and, as desired, swap out the initializers there \
+functions with one of the ones here. Note that the routines here are intended for  \
+D-dimensional rectangular graphs (with the two-dimensional case being the most practical one). Detailed evolution \
+may be observed for many of these routines with the assistance of the --print option (preferably by also setting --dim \
+parameter to 2 and the --length parameter to 4):"
         print(" ")
         print(textwrap.fill(longtxt, width=maxtxtlen))
         print(" ")
@@ -5768,7 +5753,8 @@ may be observed for many of these routines with the assistance of the --print op
                 bDeepDive = True
         
         if bDeepDive:
-            longtxt = "In that case, copy and paste either of the following python commands into the terminal (this requires basic familiarity with running Python scripts on your computer). The first one constructs a graph \
+            longtxt = "In that case, copy and paste either of the following python commands into the terminal \
+(this requires basic familiarity with running Python scripts on your computer and a Python setup with Numpy and SciPy). The first command constructs a graph \
 consisting of a 2-dimensional 8x8 lattice (as dictacted by the --dim and --length parameters) and performs \
 a MonteCarlo computation of 1000 runs (as indicated by the --runs parameter), with each run consisting of 3 steps (as dictated by the --steps parameter) \
 of BHP propagation that satisfiesa Pauli Exclusion Principle (as dictated by the \"--dynamics fermi\" selection), always starting each run with a Dirac delta function (as indicated by the \"--boundaryconditions InitializeDiracDelta\" selection). \
@@ -5792,7 +5778,7 @@ If the relevant dynamics involves Z-tokens, be aware that for shorter runs (some
             print(" ")
             print("python " + __file__ + "  --dim 2 --length 8  --steps 5_000  --dynamics fermi  --seed 137 --runs 1  --boundaryconditions InitializeDiracDelta")
             print(" ")
-            longtxt = "By varying the graph sizes (in general, if the --dim switch is invoked, the graph in question is a D-dimensional rectangular lattice with D**L nodes, where the D and L parameters are specified by --dim and --length, and where you should ensure that D**L is reasonably low to start with) and also the run/step parameters, and trying different boundary conditions (a listing can be seen by running \"python " + __file__ + " --initlist \"), then anyone with some familiarity of Python can gain sufficient familiarity with the code to be able to modify it to suit other areas of interest."
+            longtxt = "By varying the graph sizes (in general, if the --dim switch is invoked, the graph in question is a D-dimensional rectangular lattice with D**L nodes, where the D and L parameters are specified by --dim and --length, and where you should ensure that D**L is reasonably low to start with) and also the run/step parameters, and trying different boundary conditions (a listing can be seen by running \"python " + __file__ + " --initlist \"), then anyone with a basic familiarity of Python can gain sufficient familiarity with the code to be able to modify it to suit other areas of interest."
             print(textwrap.fill(longtxt, width=maxtxtlen))
             longtxt = "If all that is too much and too fast to take in at once, then consider this as just a preview of the rest of this tutorial, and answer \"no\" the next time you run it."
             print(" ")
@@ -6301,7 +6287,7 @@ expected value."
         sumampallctl = copy(sumampall)  
     else:
         if bDoContinuous:
-            sumamparraycont = [np.sum(inode.ContAmplitude) for inode in ggraph.NodeVec]
+            sumamparraycont = [np.sum(inode.AmplitudeCont) for inode in ggraph.NodeVec]
         sumamparray = np.zeros( ggraph.NNode ).astype("int")
         sumamparrayctl = copy(sumamparray)
         sumamparrayx = copy(sumamparray)
@@ -6543,7 +6529,7 @@ expected value."
             thisarrctl = CtlExportDimGraph(ggraph)
             if ggraph.bNeedZTokens:
                 thisarrz = ZExportDimGraph(ggraph)
-                thisarrx = ExportDimGraphx(ggraph)
+                thisarrx = ExportDimGraphx(ggraph) # subtracts off the Z-token contribution (to account for the fact that the contribution will be negated)
                 thisarrzin = ZInExportDimGraph(ggraph)
 
             else:
@@ -6573,7 +6559,7 @@ expected value."
             thisarr = [np.sum(inode.Amplitude) for inode in ggraph.NodeVec]
             thisarrctl = [np.sum(inode.AmplitudeCtl) for inode in ggraph.NodeVec]
             if ggraph.bNeedZTokens:
-                thisarrz = [np.sum(inode.ZAmplitude) for inode in ggraph.NodeVec]
+                thisarrz = [np.sum(inode.AmplitudeZ) for inode in ggraph.NodeVec]
                 #thisarrzin = [np.sum(inode.AmplitudeZIn) for inode in ggraph.NodeVec]
                 thisarrx = [(thisarr[j] - thisarrz[j]) for j in range(ggraph.NNode)]
 
