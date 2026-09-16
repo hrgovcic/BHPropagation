@@ -5613,6 +5613,9 @@ def dosomegraphsatcenter(ggraph,ngraph,bXdir=True):
 def Main():
     opts, args = ReadParams()
 
+    if len(sys.argv) < 3:
+        opts.tutorial = True
+
     bListInitializerFunctions = False
 
     BoundaryConditions = opts.initialconditions
@@ -6062,7 +6065,7 @@ expected value."
 
         print("    python " + __file__ + " --dim 2 --length 4 --steps 3 --dynamics bose --seed 579202 --runs 1_000 --boundaryconditions InitializeNaiveRegEmission")
 
-        longtxt = "Please report any bugs or other suggestions to the author at the email address given in the paper."
+        longtxt = "\nPlease report any bugs or other suggestions to the author at the email address given in the paper."
 
         print(textwrap.fill(longtxt, width=maxtxtlen))
         print(" ")
