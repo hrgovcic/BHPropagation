@@ -5614,6 +5614,7 @@ def Main():
     opts, args = ReadParams()
 
     if len(sys.argv) < 3:
+        print("\n\nNot enough arguments -- going into tutorial mode.\n\n")
         opts.tutorial = True
 
     bListInitializerFunctions = False
